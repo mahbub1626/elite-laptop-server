@@ -42,6 +42,7 @@ async function run() {
         const laptopsCategoriesCollection = client.db('eliteLaptop').collection('categories');
         const laptopsCollection = client.db('eliteLaptop').collection('laptops');
         const usersCollection = client.db('eliteLaptop').collection('users');
+        const purchasesCollection = client.db('eliteLaptop').collection('purchases');
 
 
 
@@ -87,6 +88,14 @@ async function run() {
             const result = await usersCollection.insertOne(user);
             res.send(result);
         });
+        // delete user
+
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(query);
+            res.send(result);
+        })
 
         // post a laptop
         app.post('/laptops', verifyJWT, async (req, res) => {
@@ -118,6 +127,33 @@ async function run() {
             const categoryLaptop = await laptopsCollection.find(query).toArray()
             res.send(categoryLaptop);
         })
+
+
+        // post puscheses laptops
+        app.post('/purchases', async (req, res) => {
+            const purchase = req.body;
+            console.log(purchase);
+
+            // find booked appointment , if booked return message "You already have a booking on 'date' "
+            // cheack
+            // const query = {
+            //     appointment: booking.appointment,
+            //     email: booking.email,
+            //     treatment: booking.treatment
+
+            // }
+
+            // const alreadyBooked = await bookingsCollection.find(query).toArray();
+
+            // if (alreadyBooked.length) {
+            //     const message = `You already have a booking on ${booking.appointment}`
+            //     return res.send({ acknowledged: false, message })
+            // }
+            // end
+
+            const result = await purchasesCollection.insertOne(purchase);
+            res.send(result);
+        });
 
     }
     finally {
