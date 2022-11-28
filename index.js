@@ -4,7 +4,7 @@ require('dotenv').config();
 const port = process.env.PORT || 5000;
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const app = express();
 
 // middleware
@@ -43,6 +43,7 @@ async function run() {
         const laptopsCollection = client.db('eliteLaptop').collection('laptops');
         const usersCollection = client.db('eliteLaptop').collection('users');
         const purchasesCollection = client.db('eliteLaptop').collection('purchases');
+        const paymentsCollection = client.db('eliteLaptop').collection('payments');
 
 
 
@@ -158,6 +159,46 @@ async function run() {
             res.send(categoryLaptop);
         })
 
+        app.get('/purchases/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const purchase = await purchasesCollection.findOne(query);
+            res.send(purchase);
+        })
+
+        // payment
+        app.post('/create-payment-intent', async (req, res) => {
+            const booking = req.body;
+            const resellPrice = booking.resellPrice;
+            const amount = resellPrice * 1000;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                currency: 'usd',
+                amount: amount,
+                "payment_method_types": [
+                    "card"
+                ]
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        })
+        // post and update payment data
+        app.post('/payments', async (req, res) => {
+            const payment = req.body;
+            const result = await paymentsCollection.insertOne(payment);
+            const id = payment.bookingId
+            const filter = { _id: ObjectId(id) }
+            const updateDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+            const updatedResult = await purchasesCollection.updateOne(filter, updateDoc);
+            res.send(result)
+        })
+
 
         // post puscheses laptops
         app.post('/purchases', async (req, res) => {
@@ -185,23 +226,9 @@ async function run() {
             res.send(result);
         });
 
-        // get purchase
 
-        // app.get('/purchases',  async (req, res) => {
-        //     const email = req.query.email;
-        //     // console.log('token', req.headers.authorization);
-        //     // const decodedEmail = req.decoded.email;
-        //     // console.log(email, decodedEmail)
-        //     // if (email !== decodedEmail) {
-        //     //     return res.status(403).send({ message: 'forbidden access' })
-        //     // }
-
-        //     const query = { email: email };
-        //     const purchase = await purchasesCollection.find(query).toArray();
-        //     res.send(purchase);
-        // })
-
-        app.get('/purchases', verifyJWT, async(req, res)=>{
+        // get purchase        
+        app.get('/purchases', verifyJWT, async (req, res) => {
             const email = req.query.email;
             console.log('token', req.headers.authorization);
             const decodedEmail = req.decoded.email;
@@ -209,7 +236,7 @@ async function run() {
             if (email !== decodedEmail) {
                 return res.status(403).send({ message: 'forbidden access' })
             }
-            const query = {email: email}
+            const query = { email: email }
             const purchase = await purchasesCollection.find(query).toArray()
             res.send(purchase)
         })
