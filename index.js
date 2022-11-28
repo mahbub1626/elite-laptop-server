@@ -17,7 +17,7 @@ console.log(uri)
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 
-// jwt verify 
+// jwt verify opt()middleware
 function verifyJWT(req, res, next) {
     console.log('token inside VerifyJWT', req.headers.authorization);
     const authHeader = req.headers.authorization;
@@ -53,7 +53,7 @@ async function run() {
             res.send(categories);
         })
 
-
+        // jwt api
         app.get('/jwt', async (req, res) => {
             const email = req.query.email;
             const query = { email: email };
@@ -94,6 +94,36 @@ async function run() {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await usersCollection.deleteOne(query);
+            res.send(result);
+        })
+
+        app.get('/users/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+            res.send({ isAdmin: user?.role === 'admin' });
+        })
+
+        app.put('/users/admin/:id', verifyJWT, async (req, res) => {
+            // jwt verify
+            //    see admin function
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            // // end
+
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) }
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updateDoc, options);
             res.send(result);
         })
 
@@ -155,6 +185,34 @@ async function run() {
             res.send(result);
         });
 
+        // get purchase
+
+        // app.get('/purchases',  async (req, res) => {
+        //     const email = req.query.email;
+        //     // console.log('token', req.headers.authorization);
+        //     // const decodedEmail = req.decoded.email;
+        //     // console.log(email, decodedEmail)
+        //     // if (email !== decodedEmail) {
+        //     //     return res.status(403).send({ message: 'forbidden access' })
+        //     // }
+
+        //     const query = { email: email };
+        //     const purchase = await purchasesCollection.find(query).toArray();
+        //     res.send(purchase);
+        // })
+
+        app.get('/purchases', verifyJWT, async(req, res)=>{
+            const email = req.query.email;
+            console.log('token', req.headers.authorization);
+            const decodedEmail = req.decoded.email;
+            console.log(email, decodedEmail)
+            if (email !== decodedEmail) {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            const query = {email: email}
+            const purchase = await purchasesCollection.find(query).toArray()
+            res.send(purchase)
+        })
     }
     finally {
 
