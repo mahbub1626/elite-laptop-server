@@ -205,22 +205,7 @@ async function run() {
             const purchase = req.body;
             console.log(purchase);
 
-            // find booked appointment , if booked return message "You already have a booking on 'date' "
-            // cheack
-            // const query = {
-            //     appointment: booking.appointment,
-            //     email: booking.email,
-            //     treatment: booking.treatment
-
-            // }
-
-            // const alreadyBooked = await bookingsCollection.find(query).toArray();
-
-            // if (alreadyBooked.length) {
-            //     const message = `You already have a booking on ${booking.appointment}`
-            //     return res.send({ acknowledged: false, message })
-            // }
-            // end
+            
 
             const result = await purchasesCollection.insertOne(purchase);
             res.send(result);
