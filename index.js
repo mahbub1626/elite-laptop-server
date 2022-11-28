@@ -200,7 +200,7 @@ async function run() {
         })
 
 
-        // post puscheses laptops
+        // post puscheses laptops section
         app.post('/purchases', async (req, res) => {
             const purchase = req.body;
             console.log(purchase);
